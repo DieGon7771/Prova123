@@ -1,1 +1,452 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Streaming - Prototipo Educativo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+        
+        body {
+            background: #0f0f0f;
+            color: white;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #1a1a1a;
+            border-radius: 10px;
+        }
+        
+        h1 {
+            color: #e50914;
+            margin-bottom: 10px;
+        }
+        
+        .api-status {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-size: 14px;
+            font-family: monospace;
+        }
+        
+        .catalog-selector {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        
+        .cat-btn {
+            padding: 10px 20px;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .cat-btn.active {
+            background: #e50914;
+        }
+        
+        .movies-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .movie-card {
+            background: #2a2a2a;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        
+        .movie-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .movie-poster {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+        }
+        
+        .movie-info {
+            padding: 10px;
+        }
+        
+        .movie-title {
+            font-size: 14px;
+            margin-bottom: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .movie-year {
+            color: #aaa;
+            font-size: 12px;
+        }
+        
+        .video-player {
+            display: none;
+            margin: 20px 0;
+        }
+        
+        #videoElement {
+            width: 100%;
+            max-height: 500px;
+            background: #000;
+            border-radius: 8px;
+        }
+        
+        .video-info {
+            margin-top: 15px;
+            padding: 15px;
+            background: #1a1a1a;
+            border-radius: 8px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #aaa;
+        }
+        
+        .error {
+            background: rgba(229, 9, 20, 0.2);
+            border: 1px solid #e50914;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎬 Prototipo Streaming Educativo</h1>
+            <p>Solo per scopi didattici - API esterne integrate</p>
+            
+            <div class="api-status">
+                <strong>API Configurate:</strong><br>
+                📋 Catalogo: <code>https://vixsrc.to/api/list/{type}?lang=it</code><br>
+                🎬 Video: <code>https://vixsrc.to/movie/{tmdbId}</code>
+            </div>
+        </header>
+        
+        <div class="error" id="errorBox">
+            <strong>Errore:</strong> <span id="errorText"></span>
+        </div>
+        
+        <div class="catalog-selector">
+            <button class="cat-btn active" data-type="movie">🎬 Film</button>
+            <button class="cat-btn" data-type="tv">📺 Serie TV</button>
+        </div>
+        
+        <div id="loading" class="loading">
+            Caricamento catalogo in corso...
+        </div>
+        
+        <div id="moviesGrid" class="movies-grid"></div>
+        
+        <div class="video-player" id="videoPlayer">
+            <video id="videoElement" controls></video>
+            <div class="video-info">
+                <h2 id="videoTitle">Titolo Video</h2>
+                <p id="videoDescription">Descrizione...</p>
+                <button onclick="closeVideo()" style="margin-top: 10px; padding: 8px 15px; background: #444; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    ❌ Chiudi Video
+                </button>
+            </div>
+        </div>
+    </div>
 
+    <script>
+        // ============================================
+        // CONFIGURAZIONE - MODIFICA QUI
+        // ============================================
+        const TMDB_API_KEY = 'TMDB_API_KEY_PLACEHOLDER'; // ⬅️ OTTIENI DA https://www.themoviedb.org/settings/api
+        const USE_TMDB_FOR_CATALOG = false; // false = usa la tua API vixsrc
+        
+        // Le tue API (NON MODIFICARE)
+        const CATALOG_API = 'https://vixsrc.to/api/list/';
+        const VIDEO_API = 'https://vixsrc.to/movie/';
+        
+        // ============================================
+        // VARIABILI GLOBALI
+        // ============================================
+        let currentType = 'movie';
+        
+        // ============================================
+        // INIZIALIZZAZIONE
+        // ============================================
+        document.addEventListener('DOMContentLoaded', () => {
+            // Setup bottoni catalogo
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentType = btn.dataset.type;
+                    loadCatalog(currentType);
+                });
+            });
+            
+            // Carica catalogo iniziale
+            loadCatalog('movie');
+            
+            // Avviso se manca API Key TMDB
+            if (TMDB_API_KEY.includes('INSERISCI_API_KEY')) {
+                showError('⚠️ Inserisci la tua API Key TMDB nella riga 174');
+            }
+        });
+        
+        // ============================================
+        // FUNZIONE: CARICA CATALOGO
+        // ============================================
+        async function loadCatalog(type) {
+            try {
+                showLoading(true);
+                hideError();
+                
+                let movies = [];
+                
+                if (USE_TMDB_FOR_CATALOG) {
+                    // Usa TMDB per catalogo
+                    movies = await loadFromTMDB(type);
+                } else {
+                    // Usa la TUA API per catalogo
+                    movies = await loadFromYourAPI(type);
+                }
+                
+                renderMovies(movies);
+                
+            } catch (error) {
+                console.error('Errore:', error);
+                showError(`Errore caricamento catalogo: ${error.message}`);
+                showDemoMovies();
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        async function loadFromYourAPI(type) {
+            const url = `${CATALOG_API}${type}?lang=it`;
+            console.log('📡 Chiamando API catalogo:', url);
+            
+            const response = await fetch(url);
+            
+            if (!response.ok) {
+                throw new Error(`API catalogo: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            // Adatta in base al formato della tua API
+            if (Array.isArray(data)) {
+                return data;
+            } else if (data.results && Array.isArray(data.results)) {
+                return data.results;
+            } else {
+                throw new Error('Formato API non supportato');
+            }
+        }
+        
+        async function loadFromTMDB(type) {
+            const tmdbType = type === 'tv' ? 'tv' : 'movie';
+            const url = `https://api.themoviedb.org/3/${tmdbType}/popular?api_key=${TMDB_API_KEY}&language=it&page=1`;
+            
+            const response = await fetch(url);
+            
+            if (!response.ok) {
+                throw new Error(`TMDB: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            return data.results || [];
+        }
+        
+        // ============================================
+        // FUNZIONE: CARICA VIDEO
+        // ============================================
+        async function loadMovieVideo(tmdbId, movieData) {
+            try {
+                showLoading(true);
+                hideError();
+                
+                // 1. PRIMA OTTIENI DETTAGLI DA TMDB (se disponibile)
+                let tmdbDetails = {};
+                if (TMDB_API_KEY && !TMDB_API_KEY.includes('INSERISCI_API_KEY')) {
+                    try {
+                        const tmdbUrl = `https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${TMDB_API_KEY}&language=it`;
+                        const response = await fetch(tmdbUrl);
+                        if (response.ok) {
+                            tmdbDetails = await response.json();
+                        }
+                    } catch (tmdbError) {
+                        console.warn('TMDB dettagli non disponibili:', tmdbError);
+                    }
+                }
+                
+                // 2. ORA CHIAMA LA TUA API PER IL VIDEO
+                const videoUrl = `${VIDEO_API}${tmdbId}`;
+                console.log('🎬 Chiamando API video:', videoUrl);
+                
+                const videoResponse = await fetch(videoUrl);
+                
+                if (!videoResponse.ok) {
+                    throw new Error(`API video: ${videoResponse.status}`);
+                }
+                
+                const videoData = await videoResponse.json();
+                
+                // 3. MOSTRA IL VIDEO
+                showVideo({
+                    ...movieData,
+                    ...tmdbDetails,
+                    ...videoData
+                });
+                
+            } catch (error) {
+                console.error('Errore video:', error);
+                showError(`Errore caricamento video: ${error.message}`);
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        // ============================================
+        // FUNZIONI DI RENDER
+        // ============================================
+        function renderMovies(movies) {
+            const grid = document.getElementById('moviesGrid');
+            grid.innerHTML = '';
+            
+            if (!movies || movies.length === 0) {
+                grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #aaa;">Nessun contenuto trovato</div>';
+                return;
+            }
+            
+            movies.forEach(movie => {
+                const card = document.createElement('div');
+                card.className = 'movie-card';
+                
+                const title = movie.title || movie.name || 'Senza titolo';
+                const year = movie.release_date ? movie.release_date.substring(0, 4) : 
+                            movie.first_air_date ? movie.first_air_date.substring(0, 4) : 
+                            movie.year || '-';
+                const poster = movie.poster_path ? 
+                              `https://image.tmdb.org/t/p/w500${movie.poster_path}` :
+                              movie.poster || 'https://via.placeholder.com/180x250/333/fff?text=No+Image';
+                
+                card.innerHTML = `
+                    <img src="${poster}" alt="${title}" class="movie-poster">
+                    <div class="movie-info">
+                        <div class="movie-title" title="${title}">${title}</div>
+                        <div class="movie-year">${year}</div>
+                    </div>
+                `;
+                
+                card.addEventListener('click', () => {
+                    loadMovieVideo(movie.id || movie.tmdb_id, {
+                        title,
+                        year,
+                        description: movie.overview || 'Nessuna descrizione disponibile.',
+                        poster
+                    });
+                });
+                
+                grid.appendChild(card);
+            });
+        }
+        
+        function showVideo(data) {
+            const player = document.getElementById('videoPlayer');
+            const videoElement = document.getElementById('videoElement');
+            const videoTitle = document.getElementById('videoTitle');
+            const videoDescription = document.getElementById('videoDescription');
+            
+            // Aggiorna info
+            videoTitle.textContent = data.title || 'Video';
+            videoDescription.textContent = data.description || data.overview || 'Nessuna descrizione disponibile.';
+            
+            // Configura video
+            videoElement.innerHTML = '';
+            
+            if (data.video_url) {
+                const source = document.createElement('source');
+                source.src = data.video_url;
+                source.type = 'video/mp4';
+                videoElement.appendChild(source);
+            } else if (data.sources && data.sources.length > 0) {
+                data.sources.forEach(sourceData => {
+                    const source = document.createElement('source');
+                    source.src = sourceData.src;
+                    source.type = sourceData.type || 'video/mp4';
+                    videoElement.appendChild(source);
+                });
+            } else {
+                // Fallback demo
+                const source = document.createElement('source');
+                source.src = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+                source.type = 'video/mp4';
+                videoElement.appendChild(source);
+            }
+            
+            videoElement.load();
+            player.style.display = 'block';
+            player.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function closeVideo() {
+            document.getElementById('videoPlayer').style.display = 'none';
+            document.getElementById('videoElement').pause();
+        }
+        
+        // ============================================
+        // FUNZIONI DI UTILITÀ
+        // ============================================
+        function showDemoMovies() {
+            const demoMovies = [
+                { id: 299534, title: "Avengers: Endgame", year: "2019", poster_path: "/or06FN3Dka5tukK1e9sl16pB3iy.jpg", overview: "Film dimostrativo" },
+                { id: 155, title: "The Dark Knight", year: "2008", poster_path: "/qJ2tW6WMUDux911r6m7haRef0WH.jpg", overview: "Film dimostrativo" },
+                { id: 238, title: "The Godfather", year: "1972", poster_path: "/3bhkrj58Vtu7enYsRolD1fZdja1.jpg", overview: "Film dimostrativo" }
+            ];
+            renderMovies(demoMovies);
+        }
+        
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+        
+        function showError(message) {
+            document.getElementById('errorText').textContent = message;
+            document.getElementById('errorBox').style.display = 'block';
+        }
+        
+        function hideError() {
+            document.getElementById('errorBox').style.display = 'none';
+        }
+    </script>
+</body>
+  </html>
