@@ -1,0 +1,96 @@
+name: 🚀 Deploy to GitHub Pages (Manual)
+
+on:
+  workflow_dispatch:  # Solo trigger manuale
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+        - production
+        - staging
+      deploy_message:
+        description: 'Deployment message'
+        required: false
+        default: 'Manual deployment'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    
+    steps:
+      - name: ⬇️ Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: 🔐 Setup API Keys from Secrets
+        run: |
+          echo "📁 File presenti:"
+          ls -la
+          
+          echo "🔍 Cerca file HTML/JS..."
+          find . -name "*.html" -o -name "*.js" | head -10
+          
+          # CERCA E SOSTITUISCI IN TUTTI I FILE HTML/JS
+          echo "🔧 Sostituzione API Key in corso..."
+          
+          # 1. Sostituisci in file HTML
+          if [ -f "index.html" ]; then
+            echo "📄 Modificando index.html..."
+            sed -i "s/TMDB_API_KEY_PLACEHOLDER/${{ secrets.MY_KEY }}/g" index.html
+            sed -i "s/INSERT_TMDB_KEY_HERE/${{ secrets.MY_KEY }}/g" index.html
+            sed -i "s/YOUR_API_KEY_HERE/${{ secrets.MY_KEY }}/g" index.html
+            echo "✅ index.html modificato"
+          fi
+          
+          # 2. Sostituisci in file JS
+          for jsfile in *.js; do
+            if [ -f "$jsfile" ]; then
+              echo "📄 Modificando $jsfile..."
+              sed -i "s/TMDB_API_KEY_PLACEHOLDER/${{ secrets.MY_KEY }}/g" "$jsfile"
+              sed -i "s/INSERT_TMDB_KEY_HERE/${{ secrets.MY_KEY }}/g" "$jsfile"
+              sed -i "s/YOUR_API_KEY_HERE/${{ secrets.MY_KEY }}/g" "$jsfile"
+              echo "✅ $jsfile modificato"
+            fi
+          done
+          
+          # 3. Verifica
+          echo "🔎 Verifica sostituzioni:"
+          grep -r "const TMDB_API_KEY" . --include="*.html" --include="*.js" || true
+          echo " "
+          echo "🔎 Mostra primi 100 caratteri del valore:"
+          grep -r "const TMDB_API_KEY = '" . --include="*.html" --include="*.js" | head -c 100 || true
+          
+        env:
+          MY_KEY: ${{ secrets.MY_KEY }}
+          
+      - name: 📝 Create deployment info
+        run: |
+          echo "🚀 Deployment Info" > deploy-info.txt
+          echo "Date: $(date)" >> deploy-info.txt
+          echo "Environment: ${{ github.event.inputs.environment }}" >> deploy-info.txt
+          echo "Message: ${{ github.event.inputs.deploy_message }}" >> deploy-info.txt
+          echo "Commit: ${{ github.sha }}" >> deploy-info.txt
+          echo "API Key present: ${{ secrets.MY_KEY != '' }}" >> deploy-info.txt
+          
+      - name: 🌐 Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .
+          publish_branch: gh-pages  # O lascia vuoto per usare il branch di default
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: "🚀 Deploy ${{ github.event.inputs.environment }} - ${{ github.event.inputs.deploy_message }}"
+          
+      - name: ✅ Notifica completamento
+        run: |
+          echo "🎉 DEPLOYMENT COMPLETATO!"
+          echo "Environment: ${{ github.event.inputs.environment }}"
+          echo "Sito disponibile su: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+          echo " "
+          echo "🔑 API Key inserita correttamente nel build"
