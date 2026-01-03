@@ -1,20 +1,15 @@
 name: 🚀 Deploy to GitHub Pages
 
 on:
-  # Push su main trigger automatico
   push:
     branches: ["main"]
-  
-  # Permette trigger manuale dalla UI
   workflow_dispatch:
 
-# Dà i permessi al GITHUB_TOKEN per deployare
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Permette solo una deploy per volta
 concurrency:
   group: "pages"
   cancel-in-progress: false
@@ -31,37 +26,31 @@ jobs:
       - name: 📥 Checkout
         uses: actions/checkout@v4
         
-      - name: 🔐 Inject TMDB API Key
+      - name: 🔐 Inject API Key
         run: |
           echo "🔧 Iniettando API Key..."
           
-          # Lista dei placeholder da cercare
-          PLACEHOLDERS=(
-            "TMDB_API_KEY_PLACEHOLDER"
-            "INSERT_TMDB_KEY_HERE"
-            "YOUR_API_KEY_HERE"
-            "REPLACE_WITH_SECRET"
-            "INSERISCI_API_KEY_TMDB_QUI"
-          )
+          # Sostituisci il placeholder
+          if [ -f "index.html" ]; then
+            sed -i "s/TMDB_API_KEY_PLACEHOLDER/${{ secrets.MY_KEY }}/g" index.html
+            echo "✅ API Key iniettata in index.html"
+          fi
           
-          for placeholder in "${PLACEHOLDERS[@]}"; do
-            echo "🔍 Cercando: $placeholder"
-            # Sostituisci in tutti i file HTML/JS
-            find . -type f \( -name "*.html" -o -name "*.js" \) ! -path "./node_modules/*" ! -path "./.git/*" -exec grep -l "$placeholder" {} \; | while read file; do
-              echo "   📝 Modificando: $file"
-              sed -i "s/$placeholder/${{ secrets.MY_KEY }}/g" "$file"
-            done
+          # Controlla altri file
+          find . -name "*.js" -type f | while read file; do
+            if [ -f "$file" ]; then
+              sed -i "s/TMDB_API_KEY_PLACEHOLDER/${{ secrets.MY_KEY }}/g" "$file"
+              echo "✅ Modificato: $file"
+            fi
           done
-          
-          echo "✅ API Key iniettata"
           
       - name: 🛠️ Setup Pages
         uses: actions/configure-pages@v3
         
       - name: 📦 Upload artifact
-        uses: actions/upload-pages-artifact@v2
+        uses: actions/upload-pages-artifact@v2  # ⚠️ Questo è v2, non v3!
         with:
-          path: "."  # Deploya tutta la directory
+          path: "."
           
       - name: 🚀 Deploy to GitHub Pages
         id: deployment
