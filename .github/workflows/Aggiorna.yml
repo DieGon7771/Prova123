@@ -1,25 +1,41 @@
-name: Deploy
+name: 🚀 Deploy
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
+# 🔽 AGGIUNGI QUESTE PERMISSIONI 🔽
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     
+    # 🔽 AGGIUNGI ANCHE QUI 🔽
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    
     steps:
-      - uses: actions/checkout@v4
-      
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        
       - name: 🔑 Inject API Key
         run: |
+          echo "🔧 Sostituendo API Key..."
           sed -i "s/TMDB_API_KEY_PLACEHOLDER/${{ secrets.MY_KEY }}/g" index.html
-          echo "✅ API Key injected"
+          echo "✅ Done"
           
-      - name: 🚀 Deploy
+      - name: 🚀 Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}  # ⚠️ DEVE ESSERE GITHUB_TOKEN
           publish_dir: .
+          publish_branch: main  # ⚠️ CAMBIA: usa main, NON gh-pages
           keep_files: false
+          commit_message: "🚀 Deploy with API Key"
