@@ -1,9 +1,7 @@
-name: Deploy static content to Pages
+name: 🚀 Deploy Sito Manuale
 
 on:
-  push:
-    branches: ["main"]
-  workflow_dispatch:
+  workflow_dispatch:  # ⬅️ SOLO MANUALE!
 
 permissions:
   contents: read
@@ -21,24 +19,23 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: 📥 Checkout
         uses: actions/checkout@v4
         
-      # ⬇️⬇️⬇️ QUESTA È LA PARTE CHE MANCAVA ⬇️⬇️⬇️
       - name: 🔐 Inject TMDB API Key
         run: |
-          echo "Injecting API Key..."
-          # Sostituisce TMDB_API_KEY_PLACEHOLDER con il tuo secret
+          echo "🔧 Sostituendo TMDB_API_KEY_PLACEHOLDER..."
           sed -i "s/TMDB_API_KEY_PLACEHOLDER/${{ secrets.MY_KEY }}/g" index.html
-          echo "✅ API Key injected"
-      # ⬆️⬆️⬆️ QUESTA È LA PARTE CHE MANCAVA ⬆️⬆️⬆️
-        
-      - name: Setup Pages
+          echo "✅ Chiave inserita (NON COMMITTATA NEL REPO!)"
+          
+      - name: 🛠️ Setup Pages
         uses: actions/configure-pages@v5
-      - name: Upload artifact
+        
+      - name: 📦 Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
-      - name: Deploy to GitHub Pages
+          
+      - name: 🌐 Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
