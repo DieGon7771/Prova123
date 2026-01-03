@@ -1,0 +1,29 @@
+name: 🚀 Deploy Sito
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 1. PRENDI IL CODICE
+      - name: 📥 Scarica codice
+        uses: actions/checkout@v4
+        
+      # 2. METTI LA CHIAVE (SICURO - NON COMMITTA)
+      - name: 🔐 Inserisci API Key
+        run: |
+          echo "Sostituisco TMDB_API_KEY_PLACEHOLDER con la chiave..."
+          sed -i "s/TMDB_API_KEY_PLACEHOLDER/${{ secrets.MY_KEY }}/g" index.html
+          echo "✅ Fatto! Chiave inserita"
+          
+      # 3. DEPLOYA
+      - name: 🌐 Metti online
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: main  # 👈 USA LO STESSO BRANCH DEL CODICE
+          folder: .
+          clean: true
+          token: ${{ secrets.GITHUB_TOKEN }}
