@@ -1,21 +1,29 @@
 <!DOCTYPE html>
-<html>
+<html lang="it">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CloudStream Repo Redirect</title>
 <script>
   // Prende il parametro ?r= dal link
   const params = new URLSearchParams(window.location.search);
   const repo = params.get('r');
-  if (repo) {
+
+  if (repo && repo.startsWith("cloudstreamrepo://")) {
     // Redirect al protocollo cloudstreamrepo://
     window.location.href = repo;
   } else {
-    document.body.innerHTML = "No repository specified.";
+    document.addEventListener("DOMContentLoaded", () => {
+      document.body.innerHTML = `
+        <h2>Nessun repository specificato</h2>
+        <p>Assicurati che il link sia corretto.</p>
+      `;
+    });
   }
 </script>
 </head>
 <body>
-Redirecting to CloudStream...
+<h2>Redirecting to CloudStream…</h2>
+<p>If nothing happens, make sure CloudStream is installed on your device.</p>
 </body>
 </html>
