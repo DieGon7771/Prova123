@@ -1,35 +1,21 @@
 <!DOCTYPE html>
-<html lang="it">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sito Chiuso</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: Arial, sans-serif;
-            background-color: #f0f0f0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            text-align: center;
-        }
-        
-        .message {
-            font-size: 48px;
-            font-weight: bold;
-            color: #333;
-            padding: 20px;
-            border: 3px solid #ccc;
-            background-color: white;
-        }
-    </style>
+<meta charset="UTF-8">
+<title>CloudStream Repo Redirect</title>
+<script>
+  // Prende il parametro ?r= dal link
+  const params = new URLSearchParams(window.location.search);
+  const repo = params.get('r');
+  if (repo) {
+    // Redirect al protocollo cloudstreamrepo://
+    window.location.href = repo;
+  } else {
+    document.body.innerHTML = "No repository specified.";
+  }
+</script>
 </head>
 <body>
-    <div class="message">
-        SITO CHIUSO PER MANUTENZIONE
-    </div>
+Redirecting to CloudStream...
 </body>
 </html>
